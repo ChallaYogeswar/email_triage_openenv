@@ -265,21 +265,3 @@ email-triage-env/
 ```
 
 ---
-
-## ✅ Pre-Submission Checklist
-
-- [x] HF Space deploys — FastAPI on port 7860, `/health` returns 200
-- [x] OpenEnv spec compliance — `/validate` returns `{"valid": true}`
-- [x] Dockerfile builds and runs cleanly
-- [x] Baseline reproduces — `inference.py` completes without error
-- [x] 3+ tasks with graders — graders return scores in `[0.0, 1.0]`
-- [x] `openenv.yaml` with full metadata
-- [x] Typed Pydantic models for Observation, Action, Reward
-- [x] `step()` → `(observation, reward, done, info)`
-- [x] `reset()` → initial observation
-- [x] `state()` → full env state
-- [x] Meaningful shaped reward (not binary)
-- [x] Loop penalty for infinite loops
-- [x] 23 passing unit tests
-- [x] `inference.py` uses OpenAI client with `API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN`
-- [x] Runtime well under 20 minutes on 2vCPU/8GB
