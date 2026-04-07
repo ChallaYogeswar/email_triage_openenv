@@ -203,9 +203,12 @@ def parse_action(response_text: str) -> Optional[Dict[str, Any]]:
 
 def run_task(client: OpenAI, task_id: str) -> Dict[str, Any]:
     """Run one full episode on a task. Returns final grade."""
-    print(f"\n{'='*60}")
-    print(f"  TASK: {task_id}")
-    print(f"{'='*60}")
+    print(f"\n{'='*60}", flush=True)
+    print(f"  TASK: {task_id}", flush=True)
+    print(f"{'='*60}", flush=True)
+
+    # ── Required structured output: START block ──
+    print(f"[START] task={task_id}", flush=True)
 
     reset_result = env_reset(task_id)
     obs = reset_result["observation"]
@@ -213,7 +216,6 @@ def run_task(client: OpenAI, task_id: str) -> Dict[str, Any]:
     done = False
     step = 0
     cumulative_reward = 0.0
-    history: List[str] = []
 
     while not done and step < max_steps:
         step += 1
@@ -234,20 +236,20 @@ def run_task(client: OpenAI, task_id: str) -> Dict[str, Any]:
             )
             response_text = completion.choices[0].message.content or ""
         except Exception as exc:
-            print(f"  [Step {step}] LLM error: {exc} — using noop")
+            print(f"  [Step {step}] LLM error: {exc} — using noop", flush=True)
             response_text = '{"action_type": "noop"}'
 
         action = parse_action(response_text)
         if not action:
-            print(f"  [Step {step}] Could not parse action from: {response_text[:80]!r} — using noop")
+            print(f"  [Step {step}] Could not parse action — using noop", flush=True)
             action = {"action_type": "noop"}
 
-        print(f"  [Step {step:2d}] Action: {json.dumps(action)[:80]}")
+        print(f"  [Step {step:2d}] Action: {json.dumps(action)[:80]}", flush=True)
 
         try:
             result = env_step(action)
         except Exception as exc:
-            print(f"  [Step {step}] env.step() error: {exc}")
+            print(f"  [Step {step}] env.step() error: {exc}", flush=True)
             break
 
         reward = result.get("reward", {})
@@ -257,26 +259,27 @@ def run_task(client: OpenAI, task_id: str) -> Dict[str, Any]:
         obs = result.get("observation", obs)
 
         reason = reward.get("reason", "")
-        print(f"          Reward: {reward_val:+.3f} | Cumul: {cumulative_reward:+.3f} | {reason[:60]}")
+        print(f"          Reward: {reward_val:+.3f} | Cumul: {cumulative_reward:+.3f} | {reason[:60]}", flush=True)
+
+        # ── Required structured output: STEP block ──
+        print(f"[STEP] step={step} reward={reward_val:.4f}", flush=True)
 
         if done:
             info = result.get("info", {})
             final_score = info.get("final_score", None)
             if final_score is not None:
-                print(f"\n  ✓ Episode done. Final score: {final_score:.4f}")
-                breakdown = info.get("grade_breakdown", {})
-                for k, v in breakdown.items():
-                    print(f"    {k}: {v}")
-                return {"task_id": task_id, "score": final_score, "breakdown": breakdown, "steps": step}
+                print(f"\n  ✓ Episode done. Final score: {final_score:.4f}", flush=True)
+                # ── Required structured output: END block ──
+                print(f"[END] task={task_id} score={final_score:.4f} steps={step}", flush=True)
+                return {"task_id": task_id, "score": final_score, "breakdown": info.get("grade_breakdown", {}), "steps": step}
 
     # Episode ended by step limit — get grade
     grade = env_grade(task_id)
     score = grade.get("score", 0.0)
-    print(f"\n  ✓ Episode ended (steps={step}). Final score: {score:.4f}")
-    breakdown = grade.get("breakdown", {})
-    for k, v in breakdown.items():
-        print(f"    {k}: {v}")
-    return {"task_id": task_id, "score": score, "breakdown": breakdown, "steps": step}
+    print(f"\n  ✓ Episode ended (steps={step}). Final score: {score:.4f}", flush=True)
+    # ── Required structured output: END block ──
+    print(f"[END] task={task_id} score={score:.4f} steps={step}", flush=True)
+    return {"task_id": task_id, "score": score, "breakdown": grade.get("breakdown", {}), "steps": step}
 
 
 # ──────────────────────────────────────────────────────────────
